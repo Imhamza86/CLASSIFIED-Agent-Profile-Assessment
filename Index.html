@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLASSIFIED: Agent Profile Assessment</title>
+    <style>
+        :root {
+            --primary: #00ff9d;
+            --secondary: #ff2d75;
+            --accent: #00a1ff;
+            --bg: #0a0a12;
+            --panel: #12121a;
+            --text: #e0e0e0;
+            --error: #ff5555;
+            --success: #00ff9d;
+            --warning: #ffaa00;
+            --font-mono: 'IBM Plex Mono', monospace;
+            --glow: 0 0 8px currentColor;
+        }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-mono);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.5;
+        }
+        
+        #terminal-container {
+            width: 90%;
+            max-width: 900px;
+            height: 80vh;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 30px rgba(0, 255, 157, 0.2);
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #terminal-header {
+            background-color: var(--panel);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 255, 157, 0.3);
+        }
+        
+        #terminal-body {
+            padding: 20px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+        
+        #terminal-footer {
+            background-color: var(--panel);
+            padding: 10px 20px;
+            border-top: 1px solid rgba(0, 255, 157, 0.3);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+        }
+        
+        .blink {
+            animation: blink 1s step-end infinite;
+        }
+        
+        @keyframes blink {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .prompt {
+            color: var(--primary);
+        }
+        
+        .command {
+            color: var(--accent);
+        }
+        
+        .response {
+            margin: 15px 0 25px;
+            white-space: pre-wrap;
+        }
+        
+        .input-line {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        #command-input {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: var(--font-mono);
+            flex-grow: 1;
+            padding: 5px;
+            margin-left: 5px;
+            caret-color: var(--primary);
+        }
+        
+        #command-input:focus {
+            outline: none;
+        }
+        
+        .option {
+            display: block;
+            padding: 8px 12px;
+            margin: 8px 0;
+            border-left: 2px solid var(--primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .option:hover {
+            background-color: rgba(0, 255, 157, 0.1);
+            border-left-width: 4px;
+            transform: translateX(4px);
+        }
+        
+        .option::before {
+            content: "‣";
+            margin-right: 10px;
+            color: var(--primary);
+        }
+        
+        .progress-container {
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background-color: var(--primary);
+            width: 0%;
+            transition: width 0.5s;
+            box-shadow: var(--glow);
+            margin-top: 5px;
+        }
+        
+        .status {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .status-success {
+            background-color: rgba(0, 255, 157, 0.2);
+            color: var(--success);
+        }
+        
+        .status-warning {
+            background-color: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+        
+        .status-error {
+            background-color: rgba(255, 85, 85, 0.2);
+            color: var(--error);
+        }
+        
+        #id-card {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            background: linear-gradient(135deg, #12121a 0%, #1a1a24 100%);
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 30px rgba(0, 255, 157, 0.3);
+            padding: 30px;
+            z-index: 100;
+        }
+        
+        .id-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--primary);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .id-photo {
+            width: 80px;
+            height: 80px;
+            background-color: #222;
+            border: 1px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: var(--text);
+        }
+        
+        .id-section {
+            margin-bottom: 20px;
+        }
+        
+        .id-label {
+            font-size: 0.8em;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .id-value {
+            font-size: 1.1em;
+            padding: 5px;
+            border-bottom: 1px solid rgba(0, 255, 157, 0.3);
+        }
+        
+        .id-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .id-stamp {
+            position: absolute;
+            right: 30px;
+            bottom: 30px;
+            color: var(--error);
+            transform: rotate(-15deg);
+            font-weight: bold;
+            opacity: 0.8;
+        }
+        
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+        }
+        
+        .typing {
+            display: inline-block;
+        }
+        
+        .typing::after {
+            content: "|";
+            animation: blink 1s step-end infinite;
+            color: var(--primary);
+        }
+        
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(0, 255, 157, 0.05) 50%,
+                transparent 100%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            animation: scanline 8s linear infinite;
+        }
+        
+        #matrix-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.05;
+            overflow: hidden;
+        }
+        
+        #matrix-canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="matrix-container">
+        <canvas id="matrix-canvas"></canvas>
+    </div>
+    <div class="scanlines"></div>
+    
+    <div id="terminal-container">
+        <div id="terminal-header">
+            <div>AGENT ASSESSMENT TERMINAL v4.2.1</div>
+            <div class="status status-success">SECURE CONNECTION</div>
+        </div>
+        
+        <div id="terminal-body">
+            <div class="response">
+> INITIALIZING AGENT PROFILE ASSESSMENT...
+> BIOSCAN COMPLETE - USER VERIFIED
+> LOADING ASSESSMENT MODULES...
+<span class="status status-success">READY</span>
+            </div>
+            
+            <div id="question-container"></div>
+            <div id="options-container"></div>
+            <div id="progress-container" style="display: none;">
+                <div>ANALYSIS PROGRESS</div>
+                <div class="progress-bar"></div>
+            </div>
+            
+            <div id="results-container" style="display: none;"></div>
+        </div>
+        
+        <div id="terminal-footer">
+            <div>STATUS: <span id="status-message">AWAITING INPUT</span></div>
+            <div>CONFIDENTIAL - EYES ONLY</div>
+        </div>
+    </div>
+    
+    <div class="overlay" id="overlay"></div>
+    
+    <div id="id-card">
+        <div class="id-header">
+            <div>
+                <div class="id-label">SECRET INTELLIGENCE SERVICE</div>
+                <div class="id-value" id="id-agency">GLOBAL ESPIONAGE NETWORK</div>
+            </div>
+            <div class="id-photo">AGENT<br>PHOTO</div>
+        </div>
+        
+        <div class="id-section">
+            <div class="id-label">OPERATIVE DESIGNATION</div>
+            <div class="id-value" id="id-codename">PHANTOM FOX</div>
+        </div>
+        
+        <div class="id-section">
+            <div class="id-label">SECURITY CLEARANCE</div>
+            <div class="id-value" id="id-rank">ELITE SPY</div>
+        </div>
+        
+        <div class="id-section">
+            <div class="id-label">OPERATIONAL TRAITS</div>
+            <div class="id-stats">
+                <div>
+                    <div class="id-label">STEALTH</div>
+                    <div class="id-value" id="id-stealth">12</div>
+                </div>
+                <div>
+                    <div class="id-label">LOYALTY</div>
+                    <div class="id-value" id="id-loyalty">8</div>
+                </div>
+                <div>
+                    <div class="id-label">TRICKERY</div>
+                    <div class="id-value" id="id-trickery">14</div>
+                </div>
+                <div>
+                    <div class="id-label">INTUITION</div>
+                    <div class="id-value" id="id-intuition">11</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="id-section">
+            <div class="id-label">ACTIVATION DATE</div>
+            <div class="id-value" id="id-date">2023-11-15</div>
+        </div>
+        
+        <div class="id-stamp">TOP SECRET</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Enhanced quiz data
+        const questions = [
+            {
+                question: "You're infiltrating a high-security facility. Your approach:",
+                options: [
+                    { text: "Exploit ventilation systems - unseen access", traits: { stealth: 4, loyalty: 0, trickery: 1, intuition: 0 } },
+                    { text: "Coordinate with team for synchronized breach", traits: { stealth: 1, loyalty: 4, trickery: 0, intuition: 0 } },
+                    { text: "Create diversion to redirect security forces", traits: { stealth: 0, loyalty: 1, trickery: 4, intuition: 0 } },
+                    { text: "Follow instinct about weakest security point", traits: { stealth: 1, loyalty: 0, trickery: 1, intuition: 3 } }
+                ]
+            },
+            {
+                question: "Your superior orders a questionable mission. You:",
+                options: [
+                    { text: "Execute without question - orders are orders", traits: { stealth: 0, loyalty: 4, trickery: 0, intuition: 1 } },
+                    { text: "Find loopholes to achieve ethical outcome", traits: { stealth: 1, loyalty: 1, trickery: 3, intuition: 0 } },
+                    { text: "Disappear and handle it your way", traits: { stealth: 3, loyalty: 0, trickery: 1, intuition: 1 } },
+                    { text: "Trust your moral compass above all", traits: { stealth: 0, loyalty: 1, trickery: 0, intuition: 4 } }
+                ]
+            },
+            {
+                question: "During extraction, your cover is nearly blown by a civilian. You:",
+                options: [
+                    { text: "Vanish before they can confirm suspicion", traits: { stealth: 4, loyalty: 0, trickery: 1, intuition: 0 } },
+                    { text: "Invoke agency protocol to contain situation", traits: { stealth: 0, loyalty: 4, trickery: 1, intuition: 0 } },
+                    { text: "Convince them they saw nothing unusual", traits: { stealth: 1, loyalty: 0, trickery: 4, intuition: 0 } },
+                    { text: "Sense whether they're threat or harmless", traits: { stealth: 0, loyalty: 1, trickery: 1, intuition: 3 } }
+                ]
+            },
+            {
+                question: "Your preferred surveillance method:",
+                options: [
+                    { text: "Physical infiltration - no digital traces", traits: { stealth: 4, loyalty: 0, trickery: 1, intuition: 0 } },
+                    { text: "Agency-approved surveillance package", traits: { stealth: 0, loyalty: 4, trickery: 0, intuition: 1 } },
+                    { text: "Social engineering - get them to reveal info", traits: { stealth: 1, loyalty: 0, trickery: 4, intuition: 0 } },
+                    { text: "Behavioral analysis predicts movements", traits: { stealth: 0, loyalty: 1, trickery: 1, intuition: 3 } }
+                ]
+            },
+            {
+                question: "When establishing a legend (cover identity):",
+                options: [
+                    { text: "Create minimal identity that draws no attention", traits: { stealth: 4, loyalty: 0, trickery: 1, intuition: 0 } },
+                    { text: "Use agency-provided thoroughly backstopped ID", traits: { stealth: 0, loyalty: 4, trickery: 1, intuition: 0 } },
+                    { text: "Build elaborate persona with convincing details", traits: { stealth: 1, loyalty: 0, trickery: 4, intuition: 0 } },
+                    { text: "Adapt persona based on situational cues", traits: { stealth: 0, loyalty: 1, trickery: 1, intuition: 3 } }
+                ]
+            }
+        ];
+
+        // Enhanced codename components
+        const codenameParts = {
+            stealth: {
+                adjectives: ["Phantom", "Ghost", "Shadow", "Silent", "Night"],
+                nouns: ["Stalker", "Whisper", "Wraith", "Specter", "Dagger"]
+            },
+            loyalty: {
+                adjectives: ["Iron", "Steadfast", "Vigilant", "True", "Noble"],
+                nouns: ["Sentinel", "Bastion", "Guardian", "Watchman", "Shield"]
+            },
+            trickery: {
+                adjectives: ["Crimson", "Sly", "Cunning", "Deceptive", "Rogue"],
+                nouns: ["Jester", "Trickster", "Mirage", "Facade", "Masquerade"]
+            },
+            intuition: {
+                adjectives: ["Oracle", "Psy", "Mystic", "Sharp", "Keen"],
+                nouns: ["Seer", "Watcher", "Raven", "Echo", "Insight"]
+            }
+        };
+
+        // Rank thresholds
+        const ranks = [
+            { name: "PROBATIONARY AGENT", threshold: 10 },
+            { name: "FIELD OPERATIVE", threshold: 15 },
+            { name: "ELITE SPY", threshold: 20 },
+            { name: "SPECTER", threshold: 25 }
+        ];
+
+        // Agencies based on dominant trait
+        const agencies = {
+            stealth: "COVERT OPERATIONS DIVISION",
+            loyalty: "CENTRAL INTELLIGENCE DIRECTORATE",
+            trickery: "PSYCHOLOGICAL OPERATIONS",
+            intuition: "ANALYTICAL PREDICTION UNIT"
+        };
+
+        // State
+        let currentQuestion = 0;
+        let traits = {
+            stealth: 0,
+            loyalty: 0,
+            trickery: 0,
+            intuition: 0
+        };
+
+        // DOM elements
+        const questionContainer = document.getElementById('question-container');
+        const optionsContainer = document.getElementById('options-container');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.querySelector('.progress-bar');
+        const resultsContainer = document.getElementById('results-container');
+        const statusMessage = document.getElementById('status-message');
+        const overlay = document.getElementById('overlay');
+        const idCard = document.getElementById('id-card');
+        const matrixCanvas = document.getElementById('matrix-canvas');
+
+        // Initialize terminal
+        function initTerminal() {
+            // Start matrix background
+            initMatrix();
+            
+            // Begin assessment after intro sequence
+            setTimeout(() => {
+                statusMessage.textContent = "ASSESSMENT IN PROGRESS";
+                statusMessage.className = "status status-warning";
+                showQuestion(0);
+            }, 2000);
+        }
+
+        // Initialize matrix effect
+        function initMatrix() {
+            const ctx = matrixCanvas.getContext('2d');
+            
+            // Set canvas to full size
+            matrixCanvas.width = matrixCanvas.offsetWidth;
+            matrixCanvas.height = matrixCanvas.offsetHeight;
+            
+            // Matrix characters
+            const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
+            
+            const fontSize = 14;
+            const columns = matrixCanvas.width / fontSize;
+            
+            // Initialize drops
+            const drops = [];
+            for (let i = 0; i < columns; i++) {
+                drops[i] = Math.floor(Math.random() * -100);
+            }
+            
+            // Draw function
+            function draw() {
+                // Semi-transparent background
+                ctx.fillStyle = 'rgba(10, 10, 18, 0.05)';
+                ctx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+                
+                // Set font and color
+                ctx.fillStyle = '#00ff9d';
+                ctx.font = `${fontSize}px ${getComputedStyle(document.body).fontFamily}`;
+                
+                // Draw characters
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                    const x = i * fontSize;
+                    const y = drops[i] * fontSize;
+                    
+                    ctx.fillText(text, x, y);
+                    
+                    // Reset drop at bottom
+                    if (y > matrixCanvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    
+                    drops[i]++;
+                }
+            }
+            
+            // Animation loop
+            setInterval(draw, 50);
+        }
+
+        // Show question with terminal-style display
+        function showQuestion(index) {
+            if (index >= questions.length) {
+                showResults();
+                return;
+            }
+
+            questionContainer.innerHTML = '';
+            optionsContainer.innerHTML = '';
+            progressContainer.style.display = 'none';
+            
+            const question = questions[index];
+            
+            // Type out question
+            typeTerminalText(questionContainer, `QUESTION ${index + 1}/${questions.length}:`, () => {
+                typeTerminalText(questionContainer, `\n${question.question}\n\n`, () => {
+                    // Show options one by one
+                    question.options.forEach((option, i) => {
+                        setTimeout(() => {
+                            const optionElement = document.createElement('div');
+                            optionElement.className = 'option';
+                            optionElement.textContent = option.text;
+                            optionElement.addEventListener('click', () => selectAnswer(option.traits));
+                            optionsContainer.appendChild(optionElement);
+                        }, i * 300);
+                    });
+                    
+                    // Show progress
+                    progressContainer.style.display = 'block';
+                    progressBar.style.width = `${(index / questions.length) * 100}%`;
+                });
+            });
+        }
+
+        // Terminal-style typing effect
+        function typeTerminalText(element, text, callback) {
+            let i = 0;
+            const originalText = element.textContent;
+            
+            const typing = setInterval(() => {
+                if (i < text.length) {
+                    element.textContent = originalText + text.substring(0, i + 1);
+                    i++;
+                } else {
+                    clearInterval(typing);
+                    if (callback) callback();
+                }
+            }, 20);
+        }
+
+        // Handle answer selection
+        function selectAnswer(selectedTraits) {
+            // Add to trait scores
+            for (const trait in selectedTraits) {
+                traits[trait] += selectedTraits[trait];
+            }
+            
+            // Show processing status
+            statusMessage.textContent = "ANALYZING RESPONSE...";
+            
+            // Simulate processing delay
+            setTimeout(() => {
+                currentQuestion++;
+                showQuestion(currentQuestion);
+                statusMessage.textContent = "ASSESSMENT IN PROGRESS";
+            }, 1000);
+        }
+
+        // Show final results
+        function showResults() {
+            questionContainer.innerHTML = '';
+            optionsContainer.innerHTML = '';
+            progressContainer.style.display = 'none';
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = '';
+            
+            // Determine dominant trait
+            const traitsArray = Object.entries(traits);
+            const dominantTrait = traitsArray.reduce((max, trait) => 
+                trait[1] > max[1] ? trait : max, traitsArray[0])[0];
+            
+            // Generate codename
+            const adjectives = codenameParts[dominantTrait].adjectives;
+            const nouns = codenameParts[dominantTrait].nouns;
+            const codename = `${adjectives[Math.floor(Math.random() * adjectives.length)]} ${
+                nouns[Math.floor(Math.random() * nouns.length)]}`;
+            
+            // Determine rank
+            const totalScore = Object.values(traits).reduce((sum, val) => sum + val, 0);
+            let rank = ranks[0].name;
+            for (let i = ranks.length - 1; i >= 0; i--) {
+                if (totalScore >= ranks[i].threshold) {
+                    rank = ranks[i].name;
+                    break;
+                }
+            }
+            
+            // Display results with terminal effects
+            typeTerminalText(resultsContainer, "ASSESSMENT COMPLETE\n", () => {
+                typeTerminalText(resultsContainer, "ANALYZING TRAIT PATTERNS...\n", () => {
+                    typeTerminalText(resultsContainer, "GENERATING OPERATIVE PROFILE...\n\n", () => {
+                        typeTerminalText(resultsContainer, `SECURITY CLEARANCE: ${rank}\n`, () => {
+                            typeTerminalText(resultsContainer, `OPERATIVE DESIGNATION: ${codename}\n`, () => {
+                                typeTerminalText(resultsContainer, `ASSIGNED AGENCY: ${agencies[dominantTrait]}\n\n`, () => {
+                                    // Create stats visualization
+                                    createStatsVisualization();
+                                    
+                                    // Add ID card button
+                                    const idButton = document.createElement('div');
+                                    idButton.className = 'option';
+                                    idButton.textContent = "GENERATE IDENTIFICATION CARD";
+                                    idButton.addEventListener('click', () => showIdCard(codename, rank, traits, agencies[dominantTrait]));
+                                    resultsContainer.appendChild(idButton);
+                                    
+                                    // Update status
+                                    statusMessage.textContent = "ASSESSMENT COMPLETE";
+                                    statusMessage.className = "status status-success";
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        }
+
+        // Create stats visualization
+        function createStatsVisualization() {
+            const statsElement = document.createElement('div');
+            statsElement.style.margin = "20px 0";
+            resultsContainer.appendChild(statsElement);
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 300;
+            statsElement.appendChild(canvas);
+            
+            new Chart(canvas, {
+                type: 'radar',
+                data: {
+                    labels: ['STEALTH', 'LOYALTY', 'TRICKERY', 'INTUITION'],
+                    datasets: [{
+                        data: Object.values(traits),
+                        backgroundColor: 'rgba(0, 255, 157, 0.2)',
+                        borderColor: '#00ff9d',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#00ff9d',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    scale: {
+                        angleLines: { color: 'rgba(0, 255, 157, 0.3)' },
+                        gridLines: { color: 'rgba(0, 255, 157, 0.3)' },
+                        pointLabels: { fontColor: '#00ff9d' },
+                        ticks: {
+                            backdropColor: 'transparent',
+                            min: 0,
+                            max: 20,
+                            stepSize: 5,
+                            display: false
+                        }
+                    },
+                    legend: { display: false },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    },
+                    tooltips: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                return tooltipItem.yLabel;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Show ID card
+        function showIdCard(codename, rank, traits, agency) {
+            // Populate ID card
+            document.getElementById('id-codename').textContent = codename;
+            document.getElementById('id-rank').textContent = rank;
+            document.getElementById('id-agency').textContent = agency;
+            document.getElementById('id-stealth').textContent = traits.stealth;
+            document.getElementById('id-loyalty').textContent = traits.loyalty;
+            document.getElementById('id-trickery').textContent = traits.trickery;
+            document.getElementById('id-intuition').textContent = traits.intuition;
+            
+            // Set current date
+            const today = new Date();
+            document.getElementById('id-date').textContent = today.toISOString().split('T')[0];
+            
+            // Show overlay and card
+            overlay.style.display = 'block';
+            idCard.style.display = 'block';
+            
+            // Close when clicking outside
+            overlay.addEventListener('click', () => {
+                overlay.style.display = 'none';
+                idCard.style.display = 'none';
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', initTerminal);
+    </script>
+</body>
+  </html>
